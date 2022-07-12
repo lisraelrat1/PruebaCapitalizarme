@@ -43,6 +43,8 @@ const months = [{id: "1", nombre:'Enero'},
                 {id: "12", nombre:'Diciembre'}
               ]
 
+const defaultValue = 'Selecciona una opción'
+
 type Indicator = {
     codigo: string;
     nombre: string;
@@ -108,9 +110,9 @@ export default function NavDropdown() {
     const [currency, setCurrency] = useState<string>('');
     const [disabled, setDisabled] = useState<boolean>(false)
 
-    const [selectedIndicator, setSelectedIndicator] = useState<string>('');
-    const [selectedYear, setSelectedYear] = useState<string>('');
-    const [selectedMonth, setSelectedMonth] = useState<string>('');
+    const [selectedIndicator, setSelectedIndicator] = useState<string>(defaultValue);
+    const [selectedYear, setSelectedYear] = useState<string>(defaultValue);
+    const [selectedMonth, setSelectedMonth] = useState<string>(defaultValue);
     
 
     useEffect(() => {
@@ -120,16 +122,16 @@ export default function NavDropdown() {
         const years = await getYears(yearByIndicator, selectedIndicator);
         setYears(years);
 
-        if (selectedIndicator != '' && selectedMonth != ''){
+        if (selectedIndicator !== defaultValue && selectedYear!== defaultValue && selectedMonth !== defaultValue){
           const title = await chartTitle(indicators.find(o => o.codigo===selectedIndicator)!, selectedYear , months.find(o => o.id === selectedMonth)!.nombre);
           setTitle(title);
         }
 
-        if (selectedIndicator != ''){
+        if (selectedIndicator !== defaultValue){
           setCurrency(indicators.find(o => o.codigo===selectedIndicator)!.unidad_medida);
         }
 
-        if (selectedIndicator != '' && yearlyIndicators.indexOf(selectedIndicator) > -1){
+        if (selectedIndicator !== defaultValue && yearlyIndicators.includes(selectedIndicator)){
           setDisabled(true);
         }
         else{
@@ -163,6 +165,7 @@ export default function NavDropdown() {
                 <Form.Group controlId="indicador">
                   <Form.Label>Indicador</Form.Label>
                   <Form.Select size="lg" aria-label="Default select example" onChange={selectIndicatorChange}>
+                    <option> {defaultValue} </option>
                     {indicators.map((i) => {
                       const {nombre, codigo} = i;
                       return <option value={codigo}>{nombre}</option>;
@@ -173,7 +176,8 @@ export default function NavDropdown() {
               <Col>
                 <Form.Group controlId="indicador">
                   <Form.Label>Año</Form.Label>
-                  <Form.Select size="lg" onChange={selectYearChange}>
+                  <Form.Select size="lg" onChange={selectYearChange} value={selectedYear || defaultValue}>
+                      <option>{defaultValue}</option>
                       {years.map((i) => {
                       return <option value={i}>{i}</option>;
                       })}
@@ -184,6 +188,7 @@ export default function NavDropdown() {
                 <Form.Group controlId="indicador">
                   <Form.Label>Mes</Form.Label>
                   <Form.Select size="lg" aria-label="Default select example" onChange={selectMonthChange} disabled={disabled}>
+                    <option>{defaultValue}</option>
                     {months.map((i) => {
                       const {id, nombre} = i;
                       return <option value={id}>{nombre}</option>;
@@ -195,7 +200,8 @@ export default function NavDropdown() {
           </Container>
         </Navbar>
 
-        <Chart title={title} indicatorType={selectedIndicator} moneda={currency} year={selectedYear} month={selectedMonth}/>
+        {yearlyIndicators.includes(selectedIndicator) ? (selectedIndicator != defaultValue && selectedYear != defaultValue && <Chart title={title} indicatorType={selectedIndicator} moneda={currency} year={selectedYear} month={selectedMonth}/>) : (selectedIndicator != defaultValue && selectedYear != defaultValue && selectedMonth != defaultValue && <Chart title={title} indicatorType={selectedIndicator} moneda={currency} year={selectedYear} month={selectedMonth}/>)}
+
       </>
     );
   }

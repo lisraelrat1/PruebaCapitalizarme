@@ -2,7 +2,7 @@ import axios, { AxiosError }  from "axios";
 import { useEffect, useState } from "react";
 import Plot from "react-plotly.js";
 import moment from 'moment-timezone';
-import Spinner from 'react-bootstrap/Spinner';
+import ClipLoader from "react-spinners/ClipLoader";
 
 
 const baseURL = "https://mindicador.cl/api";
@@ -12,7 +12,7 @@ type ChartProps = {
     indicatorType: string;
     moneda: string;
     year: string;
-    month: string;
+    month?: string;
 }
 
 type Serie = {
@@ -29,7 +29,10 @@ type SerieResponse = {
         serie: Array<Serie>;
 }
 
-type ServerError = { errorMessage: string };
+type ServerError = { error: string;
+                     message: string; 
+                     description: string;
+                };
 
 const yearlyIndicators = ["tasa_desempleo", "imacec", "ipc", "utm"]
 
@@ -45,7 +48,7 @@ async function filterTimeSeries(data: Serie[], month: string):  Promise<Serie[]>
 export const Chart = ({title, indicatorType, moneda, year, month}: ChartProps) => {
 
     const [isLoading, setIsLoading] = useState(false);
-    const [errorMessage, setErrorMessage] = useState("");
+    const [errorMessage, setErrorMessage] = useState<any>(null);
 
     const [x, setXData] = useState<string[]>([]);
     const [y, setYData] = useState<number[]>([]);
@@ -59,30 +62,32 @@ export const Chart = ({title, indicatorType, moneda, year, month}: ChartProps) =
             const serie = response.data.serie;
 
             setIsLoading(false);
-            setErrorMessage("");
+            setErrorMessage(null);
 
-            if ( yearlyIndicators.indexOf(indicatorType) > -1){
+            if (yearlyIndicators.includes(indicatorType)){
                 setYData(serie.map(({ valor }) => valor));
                 setXData(serie.map(({ fecha }) => fecha));
             }
 
             else{
-                const filtered = await filterTimeSeries(serie, month);
+                const filtered = await filterTimeSeries(serie, month!);
                 setYData(filtered.map(({ valor }) => valor));
                 setXData(filtered.map(({ fecha }) => fecha));  
             }
 
-        } catch (error) {
+        } catch (error) {    
             if (axios.isAxiosError(error)) {
+                setIsLoading(false);
+                console.log(error);
                 const serverError = error as AxiosError<ServerError>;
                 if (serverError && serverError.response) {
-                  console.log(serverError.response.data);
+                  setErrorMessage(serverError.response.data.message);
                 }
             }
-            setIsLoading(false);
-            console.log(error);
-            setErrorMessage("Ha habido un error cargando los datos");
-            
+            else{
+                setIsLoading(false);
+                console.log(error);
+            }
         }
     } 
   
@@ -110,12 +115,10 @@ export const Chart = ({title, indicatorType, moneda, year, month}: ChartProps) =
         }
     };
 
-    
-
     return (
         <div>
-            {isLoading ? <Spinner animation="border" /> : <Plot data={data} layout={layout}/>}
-            {errorMessage && <div className="error">{errorMessage}</div>}
+            {isLoading ? <ClipLoader/> : <Plot data={data} layout={layout}/>}
+            {errorMessage &&  <div className="error">{errorMessage}</div>}
         </div>
     )
 }
