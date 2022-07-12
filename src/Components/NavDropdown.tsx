@@ -9,6 +9,7 @@ import moment from 'moment-timezone';
 import { Chart } from './Chart';
 
 
+
 const baseURL = "https://mindicador.cl/api";
 
 const yearByIndicator = {
@@ -25,6 +26,8 @@ const yearByIndicator = {
   "tasa_desempleo": "2009",
   "bitcoin": "2009"
 }
+
+const yearlyIndicators = ["tasa_desempleo", "imacec", "ipc", "utm"]
 
 const months = [{id: "1", nombre:'Enero'}, 
                 {id: "2", nombre:'Febrero'}, 
@@ -54,7 +57,7 @@ async function getYears( yearByIndicator: { [indicatorType: string] : string }, 
 
       const years = []
       const dateStart = moment(yearByIndicator[indicatorType]);
-      const dateEnd = moment();
+      const dateEnd = moment().subtract(1, 'years');
 
       while (dateEnd.diff(dateStart, 'years') >= 0) {
           years.push(dateStart.format('YYYY'))
@@ -96,11 +99,14 @@ async function chartTitle(indicatorType: Indicator, year:string, month:string): 
   }
 }
 
+
   
 export default function NavDropdown() {
     const [indicators, setIndicators] = useState<[] | Indicator[]>([]);
     const [years, setYears] = useState<[]>([]);
-    const [title, setTitle] = useState<string>('')
+    const [title, setTitle] = useState<string>('');
+    const [currency, setCurrency] = useState<string>('');
+    const [disabled, setDisabled] = useState<boolean>(false)
 
     const [selectedIndicator, setSelectedIndicator] = useState<string>('');
     const [selectedYear, setSelectedYear] = useState<string>('');
@@ -113,8 +119,23 @@ export default function NavDropdown() {
         setIndicators(indicators);
         const years = await getYears(yearByIndicator, selectedIndicator);
         setYears(years);
-        const title = await chartTitle(indicators.find(o => o.codigo===selectedIndicator)!, selectedYear , months.find(o => o.id === selectedMonth)!.nombre);
-        setTitle(title);
+
+        if (selectedIndicator != '' && selectedMonth != ''){
+          const title = await chartTitle(indicators.find(o => o.codigo===selectedIndicator)!, selectedYear , months.find(o => o.id === selectedMonth)!.nombre);
+          setTitle(title);
+        }
+
+        if (selectedIndicator != ''){
+          setCurrency(indicators.find(o => o.codigo===selectedIndicator)!.unidad_medida);
+        }
+
+        if (selectedIndicator != '' && yearlyIndicators.indexOf(selectedIndicator) > -1){
+          setDisabled(true);
+        }
+        else{
+          setDisabled(false);
+        }
+
       })();
     }, [selectedIndicator, selectedYear, selectedMonth]);
 
@@ -162,7 +183,7 @@ export default function NavDropdown() {
               <Col>
                 <Form.Group controlId="indicador">
                   <Form.Label>Mes</Form.Label>
-                  <Form.Select size="lg" aria-label="Default select example" onChange={selectMonthChange}>
+                  <Form.Select size="lg" aria-label="Default select example" onChange={selectMonthChange} disabled={disabled}>
                     {months.map((i) => {
                       const {id, nombre} = i;
                       return <option value={id}>{nombre}</option>;
@@ -174,7 +195,7 @@ export default function NavDropdown() {
           </Container>
         </Navbar>
 
-        <Chart title={title} indicatorType={selectedIndicator} year={selectedYear} month={selectedMonth}/>
+        <Chart title={title} indicatorType={selectedIndicator} moneda={currency} year={selectedYear} month={selectedMonth}/>
       </>
     );
   }
